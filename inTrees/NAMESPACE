@@ -1,0 +1,6 @@
+exportPattern("^[[:alpha:]]+")
+
+importFrom(RRF, RRF, getTree)
+importFrom(gbm, pretty.gbm.tree)
+import(arules)
+import(xtable)
