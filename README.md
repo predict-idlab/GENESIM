@@ -6,6 +6,10 @@ This repository contains an innovative algorithm that constructs an ensemble usi
 
 An install.sh script is provided that will install all required dependencies
 
+## Documentation
+
+A nicely looking documentation page is available in the doc/ directory. Download the complete directory and open index.html
+
 ## Decision Tree Induction Algorithm Wrappers
 
 A wrapper is written around [Orange C4.5](http://docs.orange.biolab.si/2/reference/rst/Orange.classification.tree.html#Orange.classification.tree.C45Learner), [sklearn CART](http://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html), [GUIDE](https://www.stat.wisc.edu/~loh/guide.html) and [QUEST](https://www.stat.wisc.edu/~loh/quest.html). The returned object is a Decision Tree, which can be found in `decisiontree.py`. Moreover, different methods are available on this decision tree: classify new, unknown samples; visualise the tree; export it to string, JSON and DOT; etc.
