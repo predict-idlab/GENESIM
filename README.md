@@ -21,3 +21,21 @@ A wrapper is written around the well-known state-of-the-art ensemble techniques 
 ## New dataset
 
 A new dataset can easily be plugged in into the benchmark. For this, a `load_dataset()` function must be written in `load_datasets.py`
+
+## Contact
+
+You can contact me at givdwiel.vandewiele at ugent.be for any questions, proposals or if you wish to contribute.
+
+## Referring
+
+Please refer to my work when you use it. A reference to this github or to the following (yet unpublished) paper:
+
+`
+@unpublished{genesim,
+  title={\textsc{genesim}: genetic extraction of a single, interpretable model},
+  author={Gilles Vandewiele, Olivier Janssens, Femke Ongenae, Filip De Turck, Sofie Van Hoecke},
+  year={2016},
+  note={available at; \url{https://github.com/GillesVandewiele/GENESIM}}
+}
+`
+
