@@ -1,3 +1,9 @@
+"""
+Contains the code for the innovative algorithm called GENESIM
+
+Written by Gilles Vandewiele in commission of IDLab - INTEC from University Ghent.
+"""
+
 import copy
 import multiprocessing
 from pandas import DataFrame, concat

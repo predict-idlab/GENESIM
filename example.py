@@ -16,7 +16,8 @@ from sklearn.cross_validation import StratifiedKFold
 import matplotlib.pyplot as plt
 import numpy as np
 
-from constructors.ensemble import RFClassification, XGBClassification
+import constructors.ISM
+from constructors.ensemble import RFClassification, XGBClassification, bootstrap
 from constructors.genesim import GENESIM
 from constructors.treeconstructor import QUESTConstructor, GUIDEConstructor, C45Constructor, CARTConstructor
 from data.load_all_datasets import load_all_datasets
@@ -42,6 +43,7 @@ if __name__ == "__main__":
             avg_nodes[algorithm] = []
             times[algorithm] = []
         conf_matrices['GENESIM'], avg_nodes['GENESIM'], times['GENESIM'] = [], [], []
+        conf_matrices['ISM'], avg_nodes['ISM'], times['ISM'] = [], [], []
 
         skf = StratifiedKFold(df[label_col], n_folds=NR_FOLDS, shuffle=True, random_state=None)
 
@@ -67,11 +69,26 @@ if __name__ == "__main__":
                 else:
                     avg_nodes[algorithm].append(clf.nr_clf)
 
+            _constructors = [C45Constructor(), CARTConstructor(), QUESTConstructor(), GUIDEConstructor()]
+
+            print 'ISM'
+            start = time.time()
+            ism_tree = constructors.ISM.ism(bootstrap(train, label_col, _constructors, boosting=True, nr_classifiers=5),
+                                            train, label_col, min_nr_samples=1, calc_fracs_from_ensemble=False)
+            times['ISM'].append(end - start)
+            ism_pruned = ism_tree.cost_complexity_pruning(X_train, y_train, 'ism', ism_constructors=_constructors,
+                                                          ism_calc_fracs=False, n_folds=3, ism_nr_classifiers=5,
+                                                          ism_boosting=True)
+            end = time.time()
+            times['ISM'].append(end - start)
+            predictions = ism_pruned.evaluate_multiple(X_test).astype(int)
+            conf_matrices['ISM'].append(confusion_matrix(y_test, predictions))
+            avg_nodes['ISM'].append(ism_pruned.count_nodes())
+
             print 'GENESIM'
             # train_gen = train.rename(columns={'Class': 'cat'})
             start = time.time()
-            constructors = [C45Constructor(), CARTConstructor(), QUESTConstructor(), GUIDEConstructor()]
-            genetic = genesim.genetic_algorithm(train, label_col, constructors, seed=None, num_iterations=15,
+            genetic = genesim.genetic_algorithm(train, label_col, _constructors, seed=None, num_iterations=15,
                                                num_crossovers=10, population_size=150, val_fraction=0.5, prune=True,
                                                max_samples=1, tournament_size=10, nr_bootstraps=25)
             end = time.time()

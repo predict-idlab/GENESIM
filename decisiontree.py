@@ -16,6 +16,9 @@ from pandas import Series
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 
+import constructors.ISM
+from constructors.ensemble import bootstrap
+
 
 class DecisionTree(object):
     """This class contains the main object used throughout this project: a decision tree. It contains methods
@@ -103,7 +106,8 @@ class DecisionTree(object):
         return confusion_matrix
 
     def cost_complexity_pruning(self, feature_vectors, labels, tree_constructor, n_folds=3, cv=True, val_features=None,
-                                val_labels=None):
+                                val_labels=None, ism_constructors=[], ism_calc_fracs=False, ism_nr_classifiers=3,
+                                ism_boosting=False):
         """Apply cost-complexity pruning ([\[1\]](http://mlwiki.org/index.php/Cost-Complexity_Pruning),
         [\[2\]](http://support.sas.com/documentation/cdl/en/stathpug/68163/HTML/default/viewer.htm#stathpug_hpsplit_details06.htm),
         [\[3\]](ftp://public.dhe.ibm.com/software/analytics/spss/support/Stats/Docs/Statistics/Algorithms/14.0/TREE-pruning.pdf))
@@ -125,6 +129,14 @@ class DecisionTree(object):
           - `val_features` (pandas DataFrame or list of dict) - if `cv` is `False`, these are the validation feature vectors to calculate best alpha
 
           - `val_labels` (pandas Series or list) - if `cv` is `False`, these are the validation class labels to calculate best alpha
+
+          - `ism_constructors` (list) - a list of constructors from which to construct the ensemble
+
+          - `ism_calc_fracs` (boolean) - if `True`, then all probabilities are estimated by using the ensemble
+
+          - `ism_nr_classifiers` (int) - how many times do we need to bag for each of the constructors?
+
+          - `ism_boosting` (boolean) - only used when the model to prune is ISM. When this is `True`, boosting will be applied too to create an ensemble
 
         **Returns**
         -----------
@@ -168,7 +180,12 @@ class DecisionTree(object):
                 train[y_train.name] = Series(y_train, index=train.index)
                 X_test = feature_vectors.iloc[test_index, :].reset_index(drop=True)
                 y_test = labels.iloc[test_index].reset_index(drop=True)
-                constructed_tree = tree_constructor.construct_classifier(X_train, y_train)
+                if tree_constructor == 'ism':
+                    constructed_tree = constructors.ISM.ism(bootstrap(train, y_train.name, ism_constructors,
+                                                         nr_classifiers=ism_nr_classifiers, boosting=ism_boosting),
+                                               train, y_train.name, calc_fracs_from_ensemble=ism_calc_fracs)
+                else:
+                    constructed_tree = tree_constructor.construct_tree(X_train, y_train)
                 for beta in betas:
                     tree_copy = deepcopy(constructed_tree)
                     tree_copy.populate_samples(X_train, y_train.values)
