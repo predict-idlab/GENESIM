@@ -117,6 +117,7 @@ if __name__ == "__main__":
             norm_diagonal_sum = sum(
                 [conf_matrices_mean[key][i][i]/sum(conf_matrices_mean[key][i]) for i in range(len(conf_matrices_mean[key]))])
             total_count = np.sum(conf_matrices_mean[key])
+            print key
             print 'Accuracy:', float(diagonal_sum) / float(total_count)
             print 'Balanced accuracy:', float(norm_diagonal_sum) / conf_matrices_mean[key].shape[0]
 
