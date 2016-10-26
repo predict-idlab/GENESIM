@@ -27,8 +27,8 @@ from decisiontree import DecisionTree
 if __name__ == "__main__":
 
     algorithms = {QUESTConstructor().get_name(): QUESTConstructor(), GUIDEConstructor().get_name(): GUIDEConstructor(),
-                  CARTConstructor().get_name(): CARTConstructor(), C45Constructor().get_name(): C45Constructor()}#,
-                  #RFClassification().get_name(): RFClassification(), XGBClassification().get_name(): XGBClassification()}
+                  CARTConstructor().get_name(): CARTConstructor(), C45Constructor().get_name(): C45Constructor(),
+                  RFClassification().get_name(): RFClassification(), XGBClassification().get_name(): XGBClassification()}
     genesim = GENESIM()
     inTrees_clf = inTreesClassifier()
 
