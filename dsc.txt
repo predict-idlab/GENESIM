@@ -1,0 +1,8 @@
+data.txt
+"?"
+1
+1 "SepalLength" n
+2 "SepalWidth" n
+3 "PetalLength" n
+4 "PetalWidth" n
+5 Class d

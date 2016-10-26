@@ -19,6 +19,7 @@ import numpy as np
 import constructors.ISM
 from constructors.ensemble import RFClassification, XGBClassification, bootstrap
 from constructors.genesim import GENESIM
+from constructors.inTrees import inTreesClassifier
 from constructors.treeconstructor import QUESTConstructor, GUIDEConstructor, C45Constructor, CARTConstructor
 from data.load_all_datasets import load_all_datasets
 from decisiontree import DecisionTree
@@ -26,9 +27,10 @@ from decisiontree import DecisionTree
 if __name__ == "__main__":
 
     algorithms = {QUESTConstructor().get_name(): QUESTConstructor(), GUIDEConstructor().get_name(): GUIDEConstructor(),
-                  CARTConstructor().get_name(): CARTConstructor(), C45Constructor().get_name(): C45Constructor(),
-                  RFClassification().get_name(): RFClassification(), XGBClassification().get_name(): XGBClassification()}
+                  CARTConstructor().get_name(): CARTConstructor(), C45Constructor().get_name(): C45Constructor()}#,
+                  #RFClassification().get_name(): RFClassification(), XGBClassification().get_name(): XGBClassification()}
     genesim = GENESIM()
+    inTrees_clf = inTreesClassifier()
 
     NR_FOLDS = 3
     for dataset in load_all_datasets():
@@ -44,6 +46,7 @@ if __name__ == "__main__":
             times[algorithm] = []
         conf_matrices['GENESIM'], avg_nodes['GENESIM'], times['GENESIM'] = [], [], []
         conf_matrices['ISM'], avg_nodes['ISM'], times['ISM'] = [], [], []
+        conf_matrices['inTrees'], avg_nodes['inTrees'], times['inTrees'] = [], [], []
 
         skf = StratifiedKFold(df[label_col], n_folds=NR_FOLDS, shuffle=True, random_state=None)
 
@@ -71,11 +74,19 @@ if __name__ == "__main__":
 
             _constructors = [C45Constructor(), CARTConstructor(), QUESTConstructor(), GUIDEConstructor()]
 
+            print 'inTrees'
+            start = time.time()
+            orl = inTrees_clf.construct_rule_list(train, label_col, _constructors, nr_bootstraps=25)
+            end = time.time()
+            times['inTrees'].append(end-start)
+            predictions = orl.evaluate_multiple(X_test).astype(int)
+            conf_matrices['inTrees'].append(confusion_matrix(y_test, predictions))
+            avg_nodes['inTrees'].append(len(orl.rule_list))
+
             print 'ISM'
             start = time.time()
             ism_tree = constructors.ISM.ism(bootstrap(train, label_col, _constructors, boosting=True, nr_classifiers=5),
                                             train, label_col, min_nr_samples=1, calc_fracs_from_ensemble=False)
-            times['ISM'].append(end - start)
             ism_pruned = ism_tree.cost_complexity_pruning(X_train, y_train, 'ism', ism_constructors=_constructors,
                                                           ism_calc_fracs=False, n_folds=3, ism_nr_classifiers=5,
                                                           ism_boosting=True)

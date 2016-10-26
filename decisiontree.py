@@ -17,7 +17,7 @@ from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 
 import constructors.ISM
-from constructors.ensemble import bootstrap
+import constructors.ensemble
 
 
 class DecisionTree(object):
@@ -181,7 +181,7 @@ class DecisionTree(object):
                 X_test = feature_vectors.iloc[test_index, :].reset_index(drop=True)
                 y_test = labels.iloc[test_index].reset_index(drop=True)
                 if tree_constructor == 'ism':
-                    constructed_tree = constructors.ISM.ism(bootstrap(train, y_train.name, ism_constructors,
+                    constructed_tree = constructors.ISM.ism(constructors.ensemble.bootstrap(train, y_train.name, ism_constructors,
                                                          nr_classifiers=ism_nr_classifiers, boosting=ism_boosting),
                                                train, y_train.name, calc_fracs_from_ensemble=ism_calc_fracs)
                 else:
