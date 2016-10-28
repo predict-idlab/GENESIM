@@ -18,6 +18,10 @@ A wrapper is written around [Orange C4.5](http://docs.orange.biolab.si/2/referen
 
 A wrapper is written around the well-known state-of-the-art ensemble techniques [XGBoost](http://xgboost.readthedocs.io/en/latest/python/python_intro.html) and [Random Forests](http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html)
 
+## Similar techniques
+
+A wrapper written around the R package [inTrees](https://arxiv.org/abs/1408.5456) and an implementation of [ISM](https://lirias.kuleuven.be/handle/123456789/146229) can be found in the constructors package.
+
 ## New dataset
 
 A new dataset can easily be plugged in into the benchmark. For this, a `load_dataset()` function must be written in `load_datasets.py`
