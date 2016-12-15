@@ -35,12 +35,11 @@ You can contact me at givdwiel.vandewiele at ugent.be for any questions, proposa
 Please refer to my work when you use it. A reference to this github or to the following (yet unpublished) paper:
 
 `
-@article{Vandewiele,
-abstract = {Models obtained by decision tree induction techniques excel in being interpretable. However, they can be prone to overfitting, which results in a low predictive per-formance. Ensemble techniques are able to achieve a higher accuracy. However, this comes at a cost of losing interpretability of the resulting model. This makes ensemble techniques impractical in applications where decision support, instead of decision making, is crucial. To bridge this gap, we present the GENESIM algorithm that transforms an ensemble of decision trees to a single decision tree with an enhanced predictive performance by using a genetic algorithm. We compared GENESIM to prevalent decision tree induction and ensemble techniques using twelve publicly available data sets. The results show that GENESIM achieves a better predictive performance on most of these data sets than decision tree induction techniques and a predictive performance in the same order of magnitude as the ensemble techniques. Moreover, the resulting model of GENESIM has a very low complexity, making it very interpretable, in contrast to ensemble techniques.},
-author = {Vandewiele, Gilles and Janssens, Olivier and Ongenae, Femke and {De Turck}, Filip and Hoecke, Sofie Van},
-title = {{GENESIM: genetic extraction of a single, interpretable model}},
-year={2016},
-note={available at; \url{https://github.com/IBCNServices/GENESIM}}
+@article{vandewiele2016genesim,
+  title={GENESIM: genetic extraction of a single, interpretable model},
+  author={Vandewiele, Gilles and Janssens, Olivier and Ongenae, Femke and De Turck, Filip and Van Hoecke, Sofie},
+  journal={arXiv preprint arXiv:1611.05722},
+  year={2016}
 }
 `
 
