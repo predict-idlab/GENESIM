@@ -14,11 +14,11 @@ RUN apt-get -y install r-base
 RUN apt-get -y install libcurl4-openssl-dev
 RUN apt-get -y install tk
 RUN apt-get -y install libcurl4-gnutls-dev
+RUN apt-get -y install libssl-dev
 
 # Clone the repo, set working dir
 RUN git clone https://github.com/GillesVandewiele/GENESIM-1
 WORKDIR /GENESIM-1
-
 
 # Install the required python libraries
 RUN pip install pandas
@@ -38,10 +38,6 @@ RUN wget https://cran.rstudio.com/src/base/R-3/R-3.3.2.tar.gz
 RUN tar -xvzf R-3.3.2.tar.gz
 RUN cd R-3.3.2 && ./configure --with-readline=no --with-x=no && make && make install
 
-# For bayesian optimization: download source and install it
-#RUN git clone https://github.com/fmfn/BayesianOptimization.git
-#RUN python BayesianOptimization/setup.py install
-
 # Special care needed for C45Learner from Orange
 RUN wget http://www.rulequest.com/Personal/c4.5r8.tar.gz
 RUN tar -xvzf c4.5r8.tar.gz
@@ -56,8 +52,4 @@ RUN tar -xvzf inTrees_1.1.tar.gz
 RUN R -e 'install.packages("devtools", repos="http://cran.us.r-project.org")'
 RUN R -e 'library(devtools); install("'$(pwd)'/inTrees", dependencies=TRUE)'
 
-
-# ADD /GENESIM-1 .
-
-# Run app.py when the container launches
 CMD ["python", "example.py"]
