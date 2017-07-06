@@ -185,7 +185,7 @@ class DecisionTree(object):
                                                          nr_classifiers=ism_nr_classifiers, boosting=ism_boosting),
                                                train, y_train.name, calc_fracs_from_ensemble=ism_calc_fracs)
                 else:
-                    constructed_tree = tree_constructor.construct_tree(X_train, y_train)
+                    constructed_tree = tree_constructor.construct_classifier(train, X_train.columns, y_train.name)
                 for beta in betas:
                     tree_copy = deepcopy(constructed_tree)
                     tree_copy.populate_samples(X_train, y_train.values)

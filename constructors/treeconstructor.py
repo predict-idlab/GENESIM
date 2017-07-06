@@ -245,7 +245,7 @@ class CARTConstructor(TreeConstructor):
 
 
         self.dt = DecisionTreeClassifier(criterion=self.criterion, min_samples_leaf=self.min_samples_leaf,
-                                         min_samples_split=self.min_samples_leaf, max_depth=self.max_depth)
+                                         min_samples_split=self.min_samples_split, max_depth=self.max_depth)
         self.dt.fit(self.X, self.y)
 
         return self._convert_to_tree()
@@ -315,7 +315,7 @@ class CARTConstructor(TreeConstructor):
         cart = CARTConstructor()
         max_depths = np.arange(1,21,2)
         max_depths = np.append(max_depths, None)
-        min_samples_splits = np.arange(1,20,1)
+        min_samples_splits = np.arange(2,20,1)
 
         errors = {}
         for max_depth in max_depths:
@@ -532,6 +532,7 @@ class GUIDEConstructor(TreeConstructor):
         if '<=' in lines[0] or '>' in lines[0] or '=' in lines[0]:
             # Intermediate node
             node_name = lines[0].split(':')[0].lstrip()
+            # print(lines[0])
             label, value = lines[0].split(':')[1].split('<=')
             label = ' '.join(label.lstrip().rstrip().split('.'))
             value = value.lstrip().split()[0]

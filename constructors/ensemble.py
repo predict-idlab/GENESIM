@@ -94,7 +94,8 @@ class XGBClassification(EnsembleConstructor):
         }
 
         xgbBO = BayesianOptimization(xgbcv, params, verbose=0)
-        xgbBO.maximize(init_points=10, n_iter=25, n_restarts_optimizer=100)
+        xgbBO.maximize(init_points=10, n_iter=20, n_restarts_optimizer=100)
+        # xgbBO.maximize(init_points=1, n_iter=1, n_restarts_optimizer=100)
 
         best_params = xgbBO.res['max']['max_params']
 
@@ -107,6 +108,8 @@ class XGBClassification(EnsembleConstructor):
         best_reg_lambda = best_params['reg_lambda']
         best_learning_rate = best_params['learning_rate']
         best_gamma = best_params['gamma']
+
+        print(best_nr_classifiers)
 
         self.clf = XGBClassifier(learning_rate=best_learning_rate, n_estimators=best_nr_classifiers,
                                  gamma=best_gamma, subsample=best_subsample, colsample_bytree=best_colsample_bytree,
@@ -169,6 +172,7 @@ class RFClassification(EnsembleConstructor):
 
         rfBO = BayesianOptimization(rfcv, params, verbose=0)
         rfBO.maximize(init_points=10, n_iter=20, n_restarts_optimizer=50)
+        # rfBO.maximize(init_points=1, n_iter=1, n_restarts_optimizer=50)
 
         best_params = rfBO.res['max']['max_params']
 
@@ -198,6 +202,7 @@ class RFClassification(EnsembleConstructor):
                                           criterion=best_criterion, max_features=best_max_features)
         start = time.time()
         self.clf.fit(data, target)
+
         self.time = time.time() - start
 
         return self

@@ -10,11 +10,14 @@ Written by Gilles Vandewiele in commission of IDLab - INTEC from University Ghen
 
 import time
 
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import confusion_matrix
-from sklearn.cross_validation import StratifiedKFold
+from sklearn.cross_validation import StratifiedKFold, KFold
 
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.neural_network import MLPClassifier
 
 import constructors.ISM
 from constructors.ensemble import RFClassification, XGBClassification, bootstrap
@@ -26,13 +29,16 @@ from decisiontree import DecisionTree
 
 if __name__ == "__main__":
 
-    algorithms = {QUESTConstructor().get_name(): QUESTConstructor(), GUIDEConstructor().get_name(): GUIDEConstructor(),
+    algorithms = {QUESTConstructor().get_name(): QUESTConstructor(),
+                  GUIDEConstructor().get_name(): GUIDEConstructor(),
                   CARTConstructor().get_name(): CARTConstructor(), C45Constructor().get_name(): C45Constructor(),
-                  RFClassification().get_name(): RFClassification(), XGBClassification().get_name(): XGBClassification()}
+                  RFClassification().get_name(): RFClassification(),
+                  XGBClassification().get_name(): XGBClassification()
+                 }
     genesim = GENESIM()
     inTrees_clf = inTreesClassifier()
 
-    NR_FOLDS = 3
+    NR_FOLDS = 5
     for dataset in load_all_datasets():
         df = dataset['dataframe']
         label_col = dataset['label_col']
@@ -48,7 +54,7 @@ if __name__ == "__main__":
         conf_matrices['ISM'], avg_nodes['ISM'], times['ISM'] = [], [], []
         conf_matrices['inTrees'], avg_nodes['inTrees'], times['inTrees'] = [], [], []
 
-        skf = StratifiedKFold(df[label_col], n_folds=NR_FOLDS, shuffle=True, random_state=None)
+        skf = StratifiedKFold(df[label_col], n_folds=NR_FOLDS, shuffle=True, random_state=1337)
 
         for fold, (train_idx, test_idx) in enumerate(skf):
             print 'Fold', fold+1, '/', NR_FOLDS, 'for dataset', dataset['name']
@@ -66,13 +72,23 @@ if __name__ == "__main__":
                 end = time.time()
                 times[algorithm].append(end-start)
                 predictions = clf.evaluate_multiple(X_test).astype(int)
+                conf_matrix = confusion_matrix(y_test, predictions)
+                print conf_matrix
+                diagonal_sum = sum(
+                    [conf_matrix[i][i] for i in range(len(conf_matrix))])
+                norm_diagonal_sum = sum(
+                    [float(conf_matrix[i][i]) / float(sum(conf_matrix[i])) for i in
+                     range(len(conf_matrix))])
+                total_count = np.sum(conf_matrix)
+                print 'Accuracy:', float(diagonal_sum) / float(total_count)
+                print 'Balanced accuracy:', float(norm_diagonal_sum) / float(conf_matrix.shape[0])
                 conf_matrices[algorithm].append(confusion_matrix(y_test, predictions))
                 if type(clf) is DecisionTree:
                     avg_nodes[algorithm].append(clf.count_nodes())
                 else:
                     avg_nodes[algorithm].append(clf.nr_clf)
 
-            _constructors = [C45Constructor(), CARTConstructor(), QUESTConstructor(), GUIDEConstructor()]
+            _constructors = [CARTConstructor(), QUESTConstructor(), GUIDEConstructor()]
 
             print 'inTrees'
             start = time.time()
@@ -81,6 +97,21 @@ if __name__ == "__main__":
             times['inTrees'].append(end-start)
             predictions = orl.evaluate_multiple(X_test).astype(int)
             conf_matrices['inTrees'].append(confusion_matrix(y_test, predictions))
+            conf_matrix = confusion_matrix(y_test, predictions)
+            print conf_matrix
+            diagonal_sum = sum(
+                [conf_matrix[i][i] for i in range(len(conf_matrix))])
+            norm_diagonal_sum = sum(
+                [float(conf_matrix[i][i]) / float(sum(conf_matrix[i])) for i in
+                 range(len(conf_matrix))])
+            total_count = np.sum(conf_matrix)
+            correct = 0
+            for i in range(len(conf_matrix)):
+                correct += conf_matrix[i][i] + conf_matrix[i][max(i - 1, 0)] * ((i - 1) >= 0) + \
+                           conf_matrix[i][min(i + 1, len(conf_matrix[i]) - 1)] * ((i + 1) <= len(conf_matrix[i]) - 1)
+            # print 'Accuracy [-1, +1]:', float(correct) / float(total_count)
+            print 'Accuracy:', float(diagonal_sum) / float(total_count)
+            print 'Balanced accuracy:', float(norm_diagonal_sum) / float(conf_matrix.shape[0])
             avg_nodes['inTrees'].append(len(orl.rule_list))
 
             print 'ISM'
@@ -95,17 +126,48 @@ if __name__ == "__main__":
             predictions = ism_pruned.evaluate_multiple(X_test).astype(int)
             conf_matrices['ISM'].append(confusion_matrix(y_test, predictions))
             avg_nodes['ISM'].append(ism_pruned.count_nodes())
+            conf_matrix = confusion_matrix(y_test, predictions)
+            print conf_matrix
+            diagonal_sum = sum(
+                [conf_matrix[i][i] for i in range(len(conf_matrix))])
+            norm_diagonal_sum = sum(
+                [float(conf_matrix[i][i]) / float(sum(conf_matrix[i])) for i in
+                 range(len(conf_matrix))])
+            total_count = np.sum(conf_matrix)
+            correct = 0
+            for i in range(len(conf_matrix)):
+                correct += conf_matrix[i][i] + conf_matrix[i][max(i - 1, 0)] * ((i - 1) >= 0) + \
+                           conf_matrix[i][min(i + 1, len(conf_matrix[i]) - 1)] * ((i + 1) <= len(conf_matrix[i]) - 1)
+            # print 'Accuracy [-1, +1]:', float(correct) / float(total_count)
+            print 'Accuracy:', float(diagonal_sum) / float(total_count)
+            print 'Balanced accuracy:', float(norm_diagonal_sum) / float(conf_matrix.shape[0])
+            avg_nodes['inTrees'].append(len(orl.rule_list))
 
             print 'GENESIM'
             # train_gen = train.rename(columns={'Class': 'cat'})
             start = time.time()
-            genetic = genesim.genetic_algorithm(train, label_col, _constructors, seed=None, num_iterations=15,
+            genetic = genesim.genetic_algorithm(train, label_col, _constructors, seed=None, num_iterations=25,
                                                num_crossovers=10, population_size=150, val_fraction=0.5, prune=True,
                                                max_samples=1, tournament_size=10, nr_bootstraps=25)
             end = time.time()
             times['GENESIM'].append(end - start)
             predictions = genetic.evaluate_multiple(X_test).astype(int)
             conf_matrices['GENESIM'].append(confusion_matrix(y_test, predictions))
+            conf_matrix = confusion_matrix(y_test, predictions)
+            print conf_matrix
+            diagonal_sum = sum(
+                [conf_matrix[i][i] for i in range(len(conf_matrix))])
+            norm_diagonal_sum = sum(
+                [float(conf_matrix[i][i]) / float(sum(conf_matrix[i])) for i in
+                 range(len(conf_matrix))])
+            total_count = np.sum(conf_matrix)
+            correct = 0
+            for i in range(len(conf_matrix)):
+                correct += conf_matrix[i][i] + conf_matrix[i][max(i - 1, 0)] * ((i - 1) >= 0) + \
+                           conf_matrix[i][min(i + 1, len(conf_matrix[i]) - 1)] * ((i + 1) <= len(conf_matrix[i]) - 1)
+            # print 'Accuracy [-1, +1]:', float(correct) / float(total_count)
+            print 'Accuracy:', float(diagonal_sum) / float(total_count)
+            print 'Balanced accuracy:', float(norm_diagonal_sum) / float(conf_matrix.shape[0])
             avg_nodes['GENESIM'].append(genetic.count_nodes())
 
         print times
@@ -129,6 +191,12 @@ if __name__ == "__main__":
                 [conf_matrices_mean[key][i][i]/sum(conf_matrices_mean[key][i]) for i in range(len(conf_matrices_mean[key]))])
             total_count = np.sum(conf_matrices_mean[key])
             print key
+            print conf_matrices_mean[key]
+            correct = 0
+            for i in range(len(conf_matrices_mean[key])):
+                correct += conf_matrices_mean[key][i][i] + conf_matrices_mean[key][i][max(i - 1, 0)] * ((i - 1) >= 0) + \
+                           conf_matrices_mean[key][i][min(i + 1, len(conf_matrices_mean[key][i]) - 1)] * ((i + 1) <= len(conf_matrices_mean[key][i]) - 1)
+            print 'Accuracy [-1, +1]:', float(correct) / float(total_count)
             print 'Accuracy:', float(diagonal_sum) / float(total_count)
             print 'Balanced accuracy:', float(norm_diagonal_sum) / conf_matrices_mean[key].shape[0]
 
@@ -143,6 +211,6 @@ if __name__ == "__main__":
         F = plt.gcf()
         Size = F.get_size_inches()
         F.set_size_inches(Size[0] * 2, Size[1] * 1.75, forward=True)
-        # plt.show()
+        plt.show()
         rand_nr = str(int(10000*np.random.rand()))
         plt.savefig('output/' + dataset['name'] + '_CV'+str(NR_FOLDS)+'.png', bbox_inches='tight')

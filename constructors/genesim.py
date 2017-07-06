@@ -6,6 +6,8 @@ Written by Gilles Vandewiele in commission of IDLab - INTEC from University Ghen
 
 import copy
 import multiprocessing
+from collections import Counter
+
 from pandas import DataFrame, concat
 
 import numpy as np
@@ -16,7 +18,7 @@ import sys
 from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.metrics import accuracy_score
 
-from constructors.ensemble import bootstrap
+from constructors.ensemble import bootstrap, RFClassification, XGBClassification
 from decisiontree import DecisionTree
 
 class LineSegment(object):
@@ -181,7 +183,7 @@ class GENESIM(object):
         :param features: list of dimension names
         :return: new set of regions, which are the intersections of the regions in 1 and 2
         """
-        print "Merging ", len(regions1), " with ", len(regions2), " regions."
+        # print "Merging ", len(regions1), " with ", len(regions2), " regions."
         S_intersections = [None] * len(features)
         for i in range(len(features)):
             # Create B1 and B2: 2 arrays of line segments
@@ -296,8 +298,8 @@ class GENESIM(object):
             return intersections
 
     def _fitness(self, tree, test_features_df, test_labels_df, cat_name, alpha=1, beta=0):
-        return alpha*(1-accuracy_score(test_labels_df[cat_name].values.astype(str),
-                                       tree.evaluate_multiple(test_features_df).astype(str))) + beta*tree.count_nodes()
+        return alpha*(1-accuracy_score(test_labels_df[cat_name].values.astype(int),
+                                       tree.evaluate_multiple(test_features_df).astype(int))) + beta*tree.count_nodes()
 
     def _mutate_shift_random(self, tree, feature_vectors, labels):
         # tree.visualise('beforeMutationShift')
@@ -375,6 +377,153 @@ class GENESIM(object):
             return_dict[seed] = None
             # return 0
 
+    def _convert_sklearn_to_tree(self, dt, features):
+        """Convert a sklearn object to a `decisiontree.decisiontree` object"""
+        n_nodes = dt.tree_.node_count
+        children_left = dt.tree_.children_left
+        children_right = dt.tree_.children_right
+        feature = dt.tree_.feature
+        threshold = dt.tree_.threshold
+        classes = dt.classes_
+
+        # The tree structure can be traversed to compute various properties such
+        # as the depth of each node and whether or not it is a leaf.
+        node_depth = np.zeros(shape=n_nodes)
+        decision_trees = [None] * n_nodes
+        for i in range(n_nodes):
+            decision_trees[i] = DecisionTree()
+        is_leaves = np.zeros(shape=n_nodes, dtype=bool)
+        stack = [(0, -1)]  # seed is the root node id and its parent depth
+        while len(stack) > 0:
+            node_id, parent_depth = stack.pop()
+            node_depth[node_id] = parent_depth + 1
+
+            # If we have a test node
+            if children_left[node_id] != children_right[node_id]:
+                stack.append((children_left[node_id], parent_depth + 1))
+                stack.append((children_right[node_id], parent_depth + 1))
+            else:
+                is_leaves[node_id] = True
+
+        for i in range(n_nodes):
+
+            if children_left[i] > 0:
+                decision_trees[i].left = decision_trees[children_left[i]]
+
+            if children_right[i] > 0:
+                decision_trees[i].right = decision_trees[children_right[i]]
+
+            if is_leaves[i]:
+                decision_trees[i].label = dt.classes_[np.argmax(dt.tree_.value[i][0])]
+                decision_trees[i].value = None
+            else:
+                decision_trees[i].label = features[feature[i]]
+                decision_trees[i].value = threshold[i]
+
+        return decision_trees[0]
+
+    def parse_xgb_tree_string(self, tree_string, training_data, feature_cols, label_col, the_class):
+        # Get class distribution
+        _classes = np.unique(training_data[label_col].values)
+        class_distributions = {}
+        for _class in _classes:
+            data = training_data[training_data[label_col] != _class]
+            class_counts = Counter(data[label_col].values)
+            total = sum(class_counts.values(), 0.0)
+            for key in class_counts:
+                class_counts[key] /= total
+            class_distributions[_class] = class_counts
+
+        # Get the unique values per feature
+        unique_values_per_feature = {}
+        for feature_col in feature_cols:
+            # Just use a simple sorted list of np.unique (faster than SortedList or a set to get index of elements after testing)
+            unique_values_per_feature[feature_col] = sorted(np.unique(training_data[feature_col].values))
+
+        return self.parse_xgb_tree(tree_string, _class=the_class, class_distributions=class_distributions,
+                                   unique_values_per_feature=unique_values_per_feature, n_samples=len(training_data))
+
+    def get_closest_value(self, x, values):
+        for i in range(len(values) - 1):
+            if values[i + 1] > x:
+                return float(values[i])
+        return x
+
+    def parse_xgb_tree(self, tree_string, _class=0, class_distributions={}, unique_values_per_feature={}, n_samples=0):
+        # There is some magic involved! The leaf values need to be converted to class distributions somehow!
+        # For binary classification problems: convert to probability by calculating 1/(1+exp(-value))
+        # For multi_class: the tree_string contains n_estimators * n_classes decision trees
+        # WARNING: Classes are sorted according to output of np.unique
+        # Ordered as follows [tree_1-class_1, ..., tree_1-class_k, tree_2-class_1, ....]
+
+        # The problem is: tree_i is different for each class...
+        # One possibility is to assign the probability to that class by calculating logistic function
+        # And dividing the rest of the probability (sum to 1) according to the distribution of the remaining classes
+
+        # Next problem is: everything is expressed as "feature < threshold" instead "feature <= threshold"
+        # Solution is: take the infimum of those feature values
+
+        decision_trees = {}
+        # Binary classification
+        binary_classification = len(class_distributions.keys()) == 2
+        for line in tree_string.split('\n'):
+            if line != '':
+                _id, rest = line.split(':')
+                _id = _id.lstrip()
+                if rest[:4] != 'leaf':
+                    feature = rest.split('<')[0][1:]
+                    highest_lower_threshold = self.get_closest_value(float(rest.split('<')[1].split(']')[0]),
+                                                                unique_values_per_feature[feature])
+                    decision_trees[_id] = DecisionTree(right=None, left=None,
+                                                       label=feature, value=highest_lower_threshold,
+                                                       parent=None)
+                else:
+                    leaf_value = float(rest.split('=')[1])
+                    if binary_classification:
+                        probability = 1 / (1 + np.exp(leaf_value))
+                        other_class = class_distributions[_class].keys()[0]
+                        class_probs = {_class: int(n_samples * probability),
+                                       other_class: int(n_samples * (1 - probability))}
+                        if probability > 0.5:
+                            most_probable_class = _class
+                        else:
+                            most_probable_class = other_class
+                    else:
+                        probability = 1 / (1 + np.exp(-leaf_value))
+                        class_probs = {}
+                        remainder_samples = int(n_samples - probability * n_samples)
+                        class_probs[_class] = int(probability * n_samples)
+                        most_probable_class, most_samples = _class, class_probs[_class]
+                        for other_class in class_distributions[_class]:
+                            amount_samples = int(remainder_samples * class_distributions[_class][other_class])
+                            class_probs[other_class] = amount_samples
+                            if amount_samples > most_samples:
+                                most_probable_class = other_class
+                                most_samples = amount_samples
+
+                    decision_trees[_id] = DecisionTree(right=None, left=None,
+                                                       label=most_probable_class, value=None,
+                                                       parent=None)
+                    decision_trees[_id].class_probabilities = class_probs
+
+        # Make another pass to link the different decision trees together
+        for line in tree_string.split('\n'):
+            if line != '':
+                _id, rest = line.split(':')
+                _id = _id.lstrip()
+                tree = decision_trees[_id]
+                if rest[:4] != 'leaf':
+                    rest = rest.split(']')[1].lstrip()
+                    links = rest.split(',')
+                    for link in links:
+                        word, link_id = link.split('=')
+                        if word == 'yes' or word == 'missing':
+                            tree.left = decision_trees[link_id]
+                        else:
+                            tree.right = decision_trees[link_id]
+
+        return decision_trees['0']
+
     def genetic_algorithm(self, data, label_col, tree_constructors, population_size=15, num_crossovers=3, val_fraction=0.25,
                           num_iterations=5, seed=1337, tournament_size=3, prune=False, max_samples=3,
                           nr_bootstraps=5, mutation_prob=0.25):
@@ -449,20 +598,52 @@ class GENESIM(object):
             tree = constructor.construct_classifier(train, train_features_df.columns, label_col)
             tree.populate_samples(train_features_df, train_labels_df[label_col].values)
             tree_list.append(tree)
+
+
+        # Adding the random forest trees to the population
+        rf = RFClassification()
+        xgb = XGBClassification()
+
+        feature_cols = list(train_features_df.columns)
+        rf.construct_classifier(train, feature_cols, label_col)
+        xgb_model = xgb.construct_classifier(train, feature_cols, label_col)
+
+        # print 'Random forest number of estimators:', len(rf.clf.estimators_)
+
+        for i, estimator in enumerate(rf.clf.estimators_):
+            tree = self._convert_sklearn_to_tree(estimator, feature_cols)
+            # print tree.get_binary_vector(train_features_df.iloc[0])
+            tree.populate_samples(train_features_df, train_labels_df[label_col].values)
+            predicted_labels = tree.evaluate_multiple(test_features_df).astype(int)
+            # accuracy = accuracy_score(test_labels_df[label_col].values.astype(str), predicted_labels.astype(str))
+            # print 'RF tree', i, '/', len(rf.clf.estimators_), ':', accuracy
+            tree_list.append(tree)
+
+        n_classes = len(np.unique(train[label_col].values))
+        if n_classes > 2:
+            for idx, tree_string in enumerate(xgb_model.clf._Booster.get_dump()):
+                tree = self.parse_xgb_tree_string(tree_string, train, feature_cols, label_col,
+                                             np.unique(train[label_col].values)[idx % n_classes])
+                tree_list.append(tree)
+        else:
+            for tree_string in xgb_model.clf._Booster.get_dump():
+                tree = self.parse_xgb_tree_string(tree_string, train, feature_cols, label_col, 0)
+                tree_list.append(tree)
+
         tree_list = [tree for tree in tree_list if tree is not None ]
 
         start = time.clock()
 
         for k in range(num_iterations):
-            print "Calculating accuracy and sorting"
+            # print "Calculating accuracy and sorting"
             tree_accuracy = []
             for tree in tree_list:
                 predicted_labels = tree.evaluate_multiple(test_features_df)
-                accuracy = accuracy_score(test_labels_df[label_col].values.astype(str), predicted_labels.astype(str))
+                accuracy = accuracy_score(test_labels_df[label_col].values.astype(int), predicted_labels.astype(int))
                 tree_accuracy.append((tree, accuracy, tree.count_nodes()))
 
             tree_list = [x[0] for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]]
-            print("----> Best tree till now: ", [(x[1], x[2]) for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]])
+            # print("----> Best tree till now: ", [(x[1], x[2]) for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]])
 
             # Crossovers
             mngr = multiprocessing.Manager()
@@ -482,15 +663,15 @@ class GENESIM(object):
 
             for new_tree in return_dict.values():
                 if new_tree is not None:
-                    print 'new tree added', accuracy_score(test_labels_df[label_col].values.astype(str), new_tree.evaluate_multiple(test_features_df).astype(str))
+                    # print 'new tree added', accuracy_score(test_labels_df[label_col].values.astype(int), new_tree.evaluate_multiple(test_features_df).astype(int))
                     tree_list.append(new_tree)
 
                     if prune:
-                        print 'Pruning the tree...', new_tree.count_nodes()
+                        # print 'Pruning the tree...', new_tree.count_nodes()
                         new_tree = new_tree.cost_complexity_pruning(train_features_df, train_labels_df[label_col], None, cv=False,
                                                             val_features=test_features_df,
                                                             val_labels=test_labels_df[label_col])
-                        print 'Done', new_tree.count_nodes(), accuracy_score(test_labels_df[label_col].values.astype(str), new_tree.evaluate_multiple(test_features_df).astype(str))
+                        # print 'Done', new_tree.count_nodes(), accuracy_score(test_labels_df[label_col].values.astype(int), new_tree.evaluate_multiple(test_features_df).astype(int))
                         tree_list.append(new_tree)
 
             # Mutation phase
@@ -498,11 +679,11 @@ class GENESIM(object):
                 value = np.random.rand()
                 if value < mutation_prob:
                     new_tree1 = self._mutate_shift_random(tree, train_features_df, train_labels_df[label_col].values)
-                    print 'new mutation added', accuracy_score(test_labels_df[label_col].values.astype(str),
-                                                               new_tree1.evaluate_multiple(test_features_df).astype(str))
+                    # print 'new mutation added', accuracy_score(test_labels_df[label_col].values.astype(int),
+                                                               #new_tree1.evaluate_multiple(test_features_df).astype(int))
                     new_tree2 = self._mutate_swap_subtrees(tree, train_features_df, train_labels_df[label_col].values)
-                    print 'new mutation added', accuracy_score(test_labels_df[label_col].values.astype(str),
-                                                               new_tree2.evaluate_multiple(test_features_df).astype(str))
+                    # print 'new mutation added', accuracy_score(test_labels_df[label_col].values.astype(int),
+                                                               #new_tree2.evaluate_multiple(test_features_df).astype(int))
                     tree_list.append(new_tree1)
                     tree_list.append(new_tree2)
 
@@ -514,11 +695,11 @@ class GENESIM(object):
         tree_accuracy = []
         for tree in tree_list:
             predicted_labels = tree.evaluate_multiple(test_features_df)
-            accuracy = accuracy_score(test_labels_df[label_col].values.astype(str), predicted_labels.astype(str))
+            accuracy = accuracy_score(test_labels_df[label_col].values.astype(int), predicted_labels.astype(int))
             tree_accuracy.append((tree, accuracy, tree.count_nodes()))
 
 
-        print [x for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]]
+        # print [x for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]]
 
         best_tree = sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[0][0]
         return best_tree
