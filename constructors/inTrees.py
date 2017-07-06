@@ -16,7 +16,9 @@ import re
 
 import numpy as np
 import pandas as pd
-import pandas.rpy.common as com
+import rpy2
+from rpy2.robjects import pandas2ri
+pandas2ri.activate()
 import rpy2.robjects as ro
 
 from rpy2.robjects.packages import importr
@@ -24,6 +26,39 @@ from rpy2.robjects.packages import importr
 from constructors import ensemble
 
 sys.path.append('../')
+
+def convert_to_r_posixct(obj):
+    """
+    Convert DatetimeIndex or np.datetime array to R POSIXct using
+    m8[s] format.
+ 
+    Parameters
+    ----------
+    obj : source pandas object (one of [DatetimeIndex, np.datetime])
+ 
+    Returns
+    -------
+    An R POSIXct vector (rpy2.robjects.vectors.POSIXct)
+ 
+    """
+    import time
+    from rpy2.rinterface import StrSexpVector
+ 
+    # convert m8[ns] to m8[s]
+    vals = robj.vectors.FloatSexpVector(obj.values.view('i8') / 1E9)
+    as_posixct = robj.baseenv.get('as.POSIXct')
+    origin = StrSexpVector([time.strftime("%Y-%m-%d",
+                                          time.gmtime(0)), ])
+ 
+    # We will be sending ints as UTC
+    tz = obj.tz.zone if hasattr(
+        obj, 'tz') and hasattr(obj.tz, 'zone') else 'UTC'
+    tz = StrSexpVector([tz])
+    utc_tz = StrSexpVector(['UTC'])
+ 
+    posixct = as_posixct(vals, origin=origin, tz=utc_tz)
+    posixct.do_slot_assign('tzone', tz)
+    return posixct
 
 
 class Condition:
@@ -159,12 +194,13 @@ class inTreesClassifier:
             value_type = value.dtype.type
 
             if value_type == np.datetime64:
-                value = com.convert_to_r_posixct(value)
+                value = convert_to_r_posixct(value)
             else:
-                value = [item if pd.notnull(item) else com.NA_TYPES[value_type]
+                value = [item if pd.notnull(item) else rpy2.rinterface.NA_Integer#com.NA_TYPES[value_type]
                          for item in value]
 
-                value = com.VECTOR_TYPES[value_type](value)
+                print(value_type)
+                value = rpy2.robjects.vectors.FloatVector(value)#com.VECTOR_TYPES[value_type](value)
 
                 if not strings_as_factors:
                     I = ro.baseenv.get("I")
@@ -226,7 +262,7 @@ class inTreesClassifier:
         importr('randomForest')
         importr('inTrees')
 
-        ro.globalenv["X"] = com.convert_to_r_dataframe(X_train)
+        ro.globalenv["X"] = pandas2ri.py2ri(X_train)
         ro.globalenv["target"] = ro.FactorVector(y_train.values.tolist())
 
         feature_mapping = {}

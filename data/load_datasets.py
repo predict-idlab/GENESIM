@@ -62,6 +62,7 @@ import os
 #     df = df.applymap(int)
 #
 #     return df, features, 'Class', 'wisconsinBreast'
+from sklearn.preprocessing import LabelEncoder
 
 
 def load_heart():
@@ -311,3 +312,16 @@ def load_heart():
     # df = df[feature_cols + [label_col]]
     # df[label_col] = df[label_col].map({1: 2, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 9}).astype(int)
     # return df, feature_cols, label_col, 'AA Gent'
+
+
+def load_migbase():
+    migbase = pd.read_csv(os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]),
+                                       'reduced_migbase.csv'), sep=',')
+    encoders = {}
+    for col in migbase:
+        encoders[col] = LabelEncoder()
+        migbase[col] = encoders[col].fit_transform(migbase[col])
+
+    feature_cols = list(set(migbase.columns) - {'CLASS'})
+
+    return migbase, feature_cols, 'CLASS', 'migbase'

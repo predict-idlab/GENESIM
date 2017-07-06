@@ -30,10 +30,11 @@ from decisiontree import DecisionTree
 if __name__ == "__main__":
 
     algorithms = {QUESTConstructor().get_name(): QUESTConstructor(),
-                  GUIDEConstructor().get_name(): GUIDEConstructor(),
-                  CARTConstructor().get_name(): CARTConstructor(), C45Constructor().get_name(): C45Constructor(),
-                  RFClassification().get_name(): RFClassification(),
-                  XGBClassification().get_name(): XGBClassification()
+                  #GUIDEConstructor().get_name(): GUIDEConstructor(),
+                  #CARTConstructor().get_name(): CARTConstructor(),
+                  C45Constructor().get_name(): C45Constructor(),
+                  #RFClassification().get_name(): RFClassification(),
+                  #XGBClassification().get_name(): XGBClassification()
                  }
     genesim = GENESIM()
     inTrees_clf = inTreesClassifier()
@@ -92,7 +93,7 @@ if __name__ == "__main__":
 
             print 'inTrees'
             start = time.time()
-            orl = inTrees_clf.construct_rule_list(train, label_col, _constructors, nr_bootstraps=25)
+            orl = inTrees_clf.construct_rule_list(train, label_col, _constructors, nr_bootstraps=1)
             end = time.time()
             times['inTrees'].append(end-start)
             predictions = orl.evaluate_multiple(X_test).astype(int)
@@ -141,7 +142,7 @@ if __name__ == "__main__":
             # print 'Accuracy [-1, +1]:', float(correct) / float(total_count)
             print 'Accuracy:', float(diagonal_sum) / float(total_count)
             print 'Balanced accuracy:', float(norm_diagonal_sum) / float(conf_matrix.shape[0])
-            avg_nodes['inTrees'].append(len(orl.rule_list))
+            avg_nodes['ISM'].append(ism_pruned.count_nodes())
 
             print 'GENESIM'
             # train_gen = train.rename(columns={'Class': 'cat'})

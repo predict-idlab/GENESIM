@@ -21,6 +21,8 @@ from sklearn.metrics import accuracy_score
 from constructors.ensemble import bootstrap, RFClassification, XGBClassification
 from decisiontree import DecisionTree
 
+import os
+
 class LineSegment(object):
     """
     Auxiliary class, used for the intersection algorithm. A region is composed of multiple lines (one for each
@@ -526,7 +528,7 @@ class GENESIM(object):
 
     def genetic_algorithm(self, data, label_col, tree_constructors, population_size=15, num_crossovers=3, val_fraction=0.25,
                           num_iterations=5, seed=1337, tournament_size=3, prune=False, max_samples=3,
-                          nr_bootstraps=5, mutation_prob=0.25):
+                          nr_bootstraps=5, mutation_prob=0.25, tree_path='trees'):
         """
         Construct an ensemble using different induction algorithms, combined with bagging and bootstrapping and convert
         it to a single, interpretable model
@@ -643,6 +645,10 @@ class GENESIM(object):
                 tree_accuracy.append((tree, accuracy, tree.count_nodes()))
 
             tree_list = [x[0] for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]]
+            best_tree = tree_list[0]
+            with open(tree_path+os.sep+'it_'+str(k)+'.tree', 'w') as fp:
+                fp.write(best_tree.convert_to_json())
+
             # print("----> Best tree till now: ", [(x[1], x[2]) for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]])
 
             # Crossovers
