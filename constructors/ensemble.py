@@ -89,7 +89,7 @@ class XGBClassification(EnsembleConstructor):
             'min_child_weight': (2, 10),
             'subsample': (0.7, 0.8),
             'colsample_bytree': (0.5, 0.99),
-            'gamma': (1., 0.01),
+            'gamma': (0.01, 1.),
             'reg_lambda': (0, 1)
         }
 
