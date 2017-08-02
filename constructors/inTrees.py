@@ -199,7 +199,6 @@ class inTreesClassifier:
                 value = [item if pd.notnull(item) else rpy2.rinterface.NA_Integer#com.NA_TYPES[value_type]
                          for item in value]
 
-                print(value_type)
                 value = rpy2.robjects.vectors.FloatVector(value)#com.VECTOR_TYPES[value_type](value)
 
                 if not strings_as_factors:

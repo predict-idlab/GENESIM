@@ -94,8 +94,8 @@ class XGBClassification(EnsembleConstructor):
         }
 
         xgbBO = BayesianOptimization(xgbcv, params, verbose=0)
-        xgbBO.maximize(init_points=10, n_iter=20, n_restarts_optimizer=100)
-        # xgbBO.maximize(init_points=1, n_iter=1, n_restarts_optimizer=100)
+        # xgbBO.maximize(init_points=10, n_iter=20, n_restarts_optimizer=100)
+        xgbBO.maximize(init_points=1, n_iter=1, n_restarts_optimizer=100)
 
         best_params = xgbBO.res['max']['max_params']
 

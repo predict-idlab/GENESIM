@@ -65,30 +65,30 @@ import os
 from sklearn.preprocessing import LabelEncoder
 
 
-def load_heart():
-    columns = ['age', 'sex', 'chest pain type', 'resting blood pressure', 'serum cholestoral', 'fasting blood sugar', \
-               'resting electrocardio', 'max heartrate', 'exercise induced', 'oldpeak', 'slope peak', \
-               'vessels', 'thal', 'Class']
-    features = ['age', 'sex', 'chest pain type', 'resting blood pressure', 'serum cholestoral', 'fasting blood sugar', \
-               'resting electrocardio', 'max heartrate', 'exercise induced', 'oldpeak', 'slope peak', \
-               'vessels', 'thal']
-
-    columns_copy = []
-    for column in columns:
-        column=column[:10]
-        columns_copy.append(column)
-    columns = columns_copy
-
-    features_copy = []
-    for feature in features:
-        feature=feature[:10]
-        features_copy.append(feature)
-    features=features_copy
-
-    df = pd.read_csv(os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]), 'heart.dat'), sep=' ')
-    df.columns = columns
-    df['Class'] = np.subtract(df['Class'], 1)
-    return df, features, 'Class', 'heart'
+# def load_heart():
+#     columns = ['age', 'sex', 'chest pain type', 'resting blood pressure', 'serum cholestoral', 'fasting blood sugar', \
+#                'resting electrocardio', 'max heartrate', 'exercise induced', 'oldpeak', 'slope peak', \
+#                'vessels', 'thal', 'Class']
+#     features = ['age', 'sex', 'chest pain type', 'resting blood pressure', 'serum cholestoral', 'fasting blood sugar', \
+#                'resting electrocardio', 'max heartrate', 'exercise induced', 'oldpeak', 'slope peak', \
+#                'vessels', 'thal']
+#
+#     columns_copy = []
+#     for column in columns:
+#         column=column[:10]
+#         columns_copy.append(column)
+#     columns = columns_copy
+#
+#     features_copy = []
+#     for feature in features:
+#         feature=feature[:10]
+#         features_copy.append(feature)
+#     features=features_copy
+#
+#     df = pd.read_csv(os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]), 'heart.dat'), sep=' ')
+#     df.columns = columns
+#     df['Class'] = np.subtract(df['Class'], 1)
+#     return df, features, 'Class', 'heart'
 
 
 # def load_glass():
@@ -318,10 +318,15 @@ def load_migbase():
     migbase = pd.read_csv(os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]),
                                        'reduced_migbase.csv'), sep=',')
     encoders = {}
+    col_mapping = {}
     for col in migbase:
         encoders[col] = LabelEncoder()
         migbase[col] = encoders[col].fit_transform(migbase[col])
+        col_mapping[col] = col[:10]
 
-    feature_cols = list(set(migbase.columns) - {'CLASS'})
+    migbase = migbase.rename(index=str, columns=col_mapping)
+
+    feature_cols = list(migbase.columns)
+    feature_cols.remove('CLASS')
 
     return migbase, feature_cols, 'CLASS', 'migbase'

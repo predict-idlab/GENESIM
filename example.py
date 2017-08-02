@@ -30,11 +30,11 @@ from decisiontree import DecisionTree
 if __name__ == "__main__":
 
     algorithms = {QUESTConstructor().get_name(): QUESTConstructor(),
-                  #GUIDEConstructor().get_name(): GUIDEConstructor(),
-                  #CARTConstructor().get_name(): CARTConstructor(),
+                  GUIDEConstructor().get_name(): GUIDEConstructor(),
+                  CARTConstructor().get_name(): CARTConstructor(),
                   C45Constructor().get_name(): C45Constructor(),
-                  #RFClassification().get_name(): RFClassification(),
-                  #XGBClassification().get_name(): XGBClassification()
+                  RFClassification().get_name(): RFClassification(),
+                  XGBClassification().get_name(): XGBClassification()
                  }
     genesim = GENESIM()
     inTrees_clf = inTreesClassifier()
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         conf_matrices['ISM'], avg_nodes['ISM'], times['ISM'] = [], [], []
         conf_matrices['inTrees'], avg_nodes['inTrees'], times['inTrees'] = [], [], []
 
-        skf = StratifiedKFold(df[label_col], n_folds=NR_FOLDS, shuffle=True, random_state=1337)
+        skf = StratifiedKFold(df[label_col], n_folds=NR_FOLDS, shuffle=True, random_state=None)
 
         for fold, (train_idx, test_idx) in enumerate(skf):
             print 'Fold', fold+1, '/', NR_FOLDS, 'for dataset', dataset['name']
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
             print 'inTrees'
             start = time.time()
-            orl = inTrees_clf.construct_rule_list(train, label_col, _constructors, nr_bootstraps=1)
+            orl = inTrees_clf.construct_rule_list(train, label_col, _constructors, nr_bootstraps=25)
             end = time.time()
             times['inTrees'].append(end-start)
             predictions = orl.evaluate_multiple(X_test).astype(int)
@@ -147,9 +147,9 @@ if __name__ == "__main__":
             print 'GENESIM'
             # train_gen = train.rename(columns={'Class': 'cat'})
             start = time.time()
-            genetic = genesim.genetic_algorithm(train, label_col, _constructors, seed=None, num_iterations=25,
-                                               num_crossovers=10, population_size=150, val_fraction=0.5, prune=True,
-                                               max_samples=1, tournament_size=10, nr_bootstraps=25)
+            genetic = genesim.genetic_algorithm(train, label_col, _constructors, seed=None, num_iterations=40,
+                                               num_crossovers=15, population_size=250, val_fraction=0.33, prune=True,
+                                               max_samples=1, tournament_size=15, nr_bootstraps=40)
             end = time.time()
             times['GENESIM'].append(end - start)
             predictions = genetic.evaluate_multiple(X_test).astype(int)
