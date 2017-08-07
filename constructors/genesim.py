@@ -564,6 +564,8 @@ class GENESIM(object):
         -----------
             a DecisionTree object
         """
+	if not os.path.exists(tree_path):
+	    os.makedirs(tree_path)
         np.random.seed(seed)
 
         feature_mins = {}
@@ -646,7 +648,7 @@ class GENESIM(object):
 
             tree_list = [x[0] for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]]
             best_tree = tree_list[0]
-            with open(tree_path+os.sep+'it_'+str(k)+'.tree', 'w') as fp:
+            with open(tree_path+os.sep+'it_'+str(k)+'.tree', 'w+') as fp:
                 fp.write(best_tree.convert_to_json())
 
             # print("----> Best tree till now: ", [(x[1], x[2]) for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]])
