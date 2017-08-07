@@ -66,7 +66,7 @@ if __name__ == "__main__":
             X_test = test.drop(label_col, axis=1)
             y_test = test[label_col]
 
-            for algorithm in []:#algorithms:
+            for algorithm in algorithms:
                 print algorithm
                 start = time.time()
                 clf = algorithms[algorithm].construct_classifier(train, feature_cols, label_col)
