@@ -317,11 +317,13 @@ from sklearn.preprocessing import LabelEncoder
 def load_migbase():
     migbase = pd.read_csv(os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]),
                                        'migbase_noise20.csv'), sep=',')
-    encoders = {}
+    if 'Unnamed: 0' in migbase.columns:
+        migbase = migbase.drop('Unnamed: 0', axis=1)
+    #encoders = {} 
     col_mapping = {}
     for col in migbase:
-        encoders[col] = LabelEncoder()
-        migbase[col] = encoders[col].fit_transform(migbase[col])
+    #    encoders[col] = LabelEncoder()
+    #    migbase[col] = encoders[col].fit_transform(migbase[col])
         col_mapping[col] = col[:10]
 
     migbase = migbase.rename(index=str, columns=col_mapping)
