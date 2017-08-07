@@ -564,6 +564,8 @@ class GENESIM(object):
         -----------
             a DecisionTree object
         """
+	if not os.path.exists(tree_path):
+	    os.makedirs(tree_path)
         np.random.seed(seed)
 
         feature_mins = {}

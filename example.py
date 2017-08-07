@@ -148,8 +148,8 @@ if __name__ == "__main__":
             # train_gen = train.rename(columns={'Class': 'cat'})
             start = time.time()
             genetic = genesim.genetic_algorithm(train, label_col, _constructors, seed=None, num_iterations=40,
-                                               num_crossovers=15, population_size=250, val_fraction=0.33, prune=True,
-                                               max_samples=1, tournament_size=15, nr_bootstraps=40)
+                                               num_crossovers=15, population_size=250, val_fraction=0.4, prune=True,
+                                               max_samples=3, tournament_size=15, nr_bootstraps=40)
             end = time.time()
             times['GENESIM'].append(end - start)
             predictions = genetic.evaluate_multiple(X_test).astype(int)
