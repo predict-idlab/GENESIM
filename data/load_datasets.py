@@ -316,7 +316,7 @@ from sklearn.preprocessing import LabelEncoder
 
 def load_migbase():
     migbase = pd.read_csv(os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]),
-                                       'reduced_migbase.csv'), sep=',')
+                                       'migbase_noise20.csv'), sep=',')
     encoders = {}
     col_mapping = {}
     for col in migbase:
