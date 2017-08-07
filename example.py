@@ -66,7 +66,7 @@ if __name__ == "__main__":
             X_test = test.drop(label_col, axis=1)
             y_test = test[label_col]
 
-            for algorithm in algorithms:
+            for algorithm in []:#algorithms:
                 print algorithm
                 start = time.time()
                 clf = algorithms[algorithm].construct_classifier(train, feature_cols, label_col)
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
             print 'inTrees'
             start = time.time()
-            orl = inTrees_clf.construct_rule_list(train, label_col, _constructors, nr_bootstraps=25)
+            orl = inTrees_clf.construct_rule_list(train, label_col, _constructors, nr_bootstraps=2)
             end = time.time()
             times['inTrees'].append(end-start)
             predictions = orl.evaluate_multiple(X_test).astype(int)
