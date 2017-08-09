@@ -66,7 +66,7 @@ if __name__ == "__main__":
             X_test = test.drop(label_col, axis=1)
             y_test = test[label_col]
 
-            for algorithm in algorithms:
+            for algorithm in []:#algorithms:
                 print algorithm
                 start = time.time()
                 clf = algorithms[algorithm].construct_classifier(train, feature_cols, label_col)
@@ -90,6 +90,10 @@ if __name__ == "__main__":
                     avg_nodes[algorithm].append(clf.nr_clf)
 
             _constructors = [CARTConstructor(), QUESTConstructor(), GUIDEConstructor()]
+
+	    genetic = genesim.genetic_algorithm(train, label_col, _constructors, seed=None, num_iterations=40,
+                                               num_crossovers=15, population_size=250, val_fraction=0.4, prune=True,
+                                               max_samples=3, tournament_size=15, nr_bootstraps=40)
 
             print 'inTrees'
             start = time.time()
