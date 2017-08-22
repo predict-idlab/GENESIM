@@ -374,10 +374,10 @@ class GENESIM(object):
             merged_regions = self._calculate_intersection(region1, region2, feature_cols, feature_maxs, feature_mins)
             return_dict[seed] = self._regions_to_tree_improved(train_features_df, train_labels_df, merged_regions, feature_cols,
                                                                feature_mins, feature_maxs, max_samples=max_samples)
-            # return 0
+            return return_dict[seed]
         else:
             return_dict[seed] = None
-            # return 0
+            return None
 
     def _convert_sklearn_to_tree(self, dt, features):
         """Convert a sklearn object to a `decisiontree.decisiontree` object"""
@@ -654,22 +654,23 @@ class GENESIM(object):
             # print("----> Best tree till now: ", [(x[1], x[2]) for x in sorted(tree_accuracy, key=lambda x: (-x[1], x[2]))[:min(len(tree_list), population_size)]])
 
             # Crossovers
-            mngr = multiprocessing.Manager()
-            return_dict = mngr.dict()
-            jobs = []
+            #mngr = multiprocessing.Manager()
+            #return_dict = mngr.dict()
+            #jobs = []
             for i in range(num_crossovers):
-                p = multiprocessing.Process(target=self._tournament_selection_and_merging, args=[tree_list, train_features_df, train_labels_df,
-                                                                                                 test_features_df, test_labels_df, label_col,
-                                                                                                 feature_column_names, feature_maxs, feature_mins,
-                                                                                                 max_samples, return_dict, k * i + i, tournament_size])
-                jobs.append(p)
-                p.start()
+               # p = multiprocessing.Process(target=self._tournament_selection_and_merging, args=[tree_list, train_features_df, train_labels_df,
+               #                                                                                  test_features_df, test_labels_df, label_col,
+               #                                                                                  feature_column_names, feature_maxs, feature_mins,
+               #                                                                                  max_samples, return_dict, k * i + i, tournament_size])
+               # jobs.append(p)
+               # p.start()
 
 
-            for proc in jobs:
-                proc.join()
-
-            for new_tree in return_dict.values():
+            # for proc in jobs:
+            #     proc.join()
+		new_tree = self._tournament_selection_and_merging(tree_list, train_features_df, train_labels_df, test_features_df, test_labels_df, label_col,
+								  feature_column_names, feature_maxs, feature_mins, max_samples, {}, k*i+i, tournament_size) 
+            # for new_tree in return_dict.values():
                 if new_tree is not None:
                     # print 'new tree added', accuracy_score(test_labels_df[label_col].values.astype(int), new_tree.evaluate_multiple(test_features_df).astype(int))
                     tree_list.append(new_tree)
