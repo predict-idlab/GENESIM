@@ -1,5 +1,9 @@
 # GENESIM: GENetic Extraction of a Single, Interpretable Model
 
+<p align="center">
+  <img src="evolving_trees.gif">
+</p>
+
 This repository contains an innovative algorithm that constructs an ensemble using well-known decision tree induction algorithms such as CART, C4.5, QUEST and GUIDE combined with bagging and boosting. Then, this ensemble is converted to a single, interpretable decision tree in a genetic fashion. For a certain number of iterations, random pairs of decision trees are merged together by first converting them to sets of k-dimensional hyperplanes and then calculating the intersection of these two sets (a classic problem from computational geometry). Moreover, in each iteration, an individual is mutated with a certain probabibility. After these iterations, the accuracy on a validation set is measured for each of the decision trees in the population and the one with the highest accuracy (and lowest number of nodes in case of a tie) is returned. Example.py has run code for all implemented algorithms and returns their average predictive performance, computational complexity and model complexity on a number of dataset
 
 ## Dependencies
